@@ -2,7 +2,7 @@
 
 Version 1.0.0
 
-A simple local Streamlit app for tracking glucose, ketones, headache symptoms, migraine days, energy, medication use, and notes.
+A simple local Streamlit app for tracking glucose, ketones, sleep quality, headache symptoms, migraine days, energy, medication use, and notes. The goal is to make it easier to notice possible correlations between these measures over time.
 
 This project is for personal tracking and reflection only. It is not medical advice, diagnosis, or a replacement for care from a qualified clinician.
 
