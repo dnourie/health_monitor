@@ -1,0 +1,74 @@
+# Personal Health Monitor
+
+Version 1.0.0
+
+A simple local Streamlit app for tracking glucose, ketones, headache symptoms, migraine days, energy, medication use, and notes.
+
+This project is for personal tracking and reflection only. It is not medical advice, diagnosis, or a replacement for care from a qualified clinician.
+
+## What It Tracks
+
+The first version keeps the daily form small:
+
+- Date
+- Reading time
+- Glucose in mg/dL
+- Ketones in mmol/L
+- Headache severity from 0 to 10
+- Migraine yes/no
+- Energy from 1 to 10
+- Sleep quality: Good, Disrupted, or Poor
+- Rizatriptan taken yes/no
+- Notes
+
+The notes field is intentionally flexible. It can include weather or rain, stress, unusual foods, fasting, electrolytes, caffeine, exercise, medication details, or anything else that felt relevant that day.
+
+## Project Structure
+
+```text
+health_monitor/
+  app.py
+  data/
+  src/
+    __init__.py
+    analysis.py
+    charts.py
+    data_model.py
+    storage.py
+  notebooks/
+    exploratory_analysis.ipynb
+  README.md
+  requirements.txt
+```
+
+## Install
+
+From this folder, install the requirements:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Run
+
+```bash
+streamlit run app.py
+```
+
+The app stores data locally in:
+
+```text
+data/health_log.csv
+```
+
+The CSV is created automatically the first time you save an entry.
+
+Personal CSV data is ignored by Git by default so health entries do not get pushed to GitHub accidentally.
+
+## Future Ideas
+
+- Import glucose and ketone readings from a Keto-Mojo CSV export
+- Add weather enrichment for rain, precipitation, pressure, humidity, and temperature swings
+- Add monthly Markdown reports for doctor visits
+- Add lag analysis to compare yesterday's factors with today's headache or migraine status
+- Promote repeated note themes into structured fields if they prove useful

@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.streamlit/
+.venv/
+venv/
+
+# Personal health data stays local by default.
+data/*.csv
+data/backups/
+!data/.gitkeep
