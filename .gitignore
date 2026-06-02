@@ -4,6 +4,7 @@ __pycache__/
 .streamlit/
 .venv/
 venv/
+logs/
 
 # Personal health data stays local by default.
 data/*.csv

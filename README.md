@@ -55,6 +55,40 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+Or double-click this file in Finder:
+
+```text
+start_health_monitor.command
+```
+
+It starts the Streamlit server if needed and opens the app at:
+
+```text
+http://127.0.0.1:8501
+```
+
+Leave the terminal window open while using the app.
+
+## Auto-Start on Mac
+
+To have the server start automatically when you log in, run:
+
+```bash
+./scripts/install_autostart.sh
+```
+
+After that, open the app in your browser at:
+
+```text
+http://127.0.0.1:8501
+```
+
+To remove auto-start:
+
+```bash
+./scripts/uninstall_autostart.sh
+```
+
 The app stores data locally in:
 
 ```text
