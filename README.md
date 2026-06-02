@@ -1,6 +1,6 @@
 # Personal Health Monitor
 
-Version 1.0.2
+Version 1.0.3
 
 A simple local Streamlit app for tracking glucose, ketones, sleep quality and hours, headache symptoms, migraine days, energy, mood stability, diet, medication use, and notes. The goal is to make it easier to notice possible correlations between these measures over time.
 
@@ -33,6 +33,8 @@ The notes field is intentionally flexible. It can include weather or rain, stres
 ```text
 health_monitor/
   app.py
+  assets/
+    styles.css
   data/
   src/
     __init__.py

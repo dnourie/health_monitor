@@ -1,0 +1,210 @@
+:root {
+  --hm-bg: #f6f8f7;
+  --hm-surface: #ffffff;
+  --hm-surface-soft: #eef7f4;
+  --hm-border: #d7e4df;
+  --hm-text: #22312c;
+  --hm-muted: #63746f;
+  --hm-teal: #087f75;
+  --hm-teal-dark: #075f58;
+  --hm-green: #7ca982;
+  --hm-amber: #c9902f;
+  --hm-danger: #9f3d44;
+}
+
+.stApp {
+  background:
+    linear-gradient(180deg, rgba(238, 247, 244, 0.9) 0%, rgba(246, 248, 247, 1) 260px),
+    var(--hm-bg);
+  color: var(--hm-text);
+}
+
+.block-container {
+  padding-top: 1.4rem;
+  padding-bottom: 2.5rem;
+}
+
+.hm-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--hm-border);
+  border-left: 5px solid var(--hm-teal);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 8px 22px rgba(34, 49, 44, 0.08);
+}
+
+.hm-icon {
+  display: grid;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--hm-surface-soft);
+  color: var(--hm-teal);
+  border: 1px solid #cce7df;
+}
+
+.hm-icon svg {
+  width: 34px;
+  height: 34px;
+}
+
+.hm-title {
+  margin: 0;
+  color: var(--hm-text);
+  font-size: 2rem;
+  font-weight: 760;
+  line-height: 1.15;
+}
+
+.hm-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--hm-muted);
+  max-width: 860px;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.hm-version {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: #fff7e8;
+  color: #815b1d;
+  border: 1px solid #edd59e;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+h2.hm-section-heading {
+  margin: 1rem 0 0.7rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--hm-border);
+  color: var(--hm-teal);
+  font-size: 1.25rem;
+  font-weight: 720;
+}
+
+h3.hm-section-heading-small {
+  margin: 0.7rem 0 0.55rem;
+  color: #5f6d68;
+  font-size: 1rem;
+  font-weight: 560;
+}
+
+.hm-data-file {
+  margin-top: 1.5rem;
+  color: var(--hm-muted);
+  font-size: 0.84rem;
+}
+
+h1, h2, h3 {
+  color: var(--hm-text);
+  letter-spacing: 0;
+}
+
+div[data-testid="stForm"] {
+  border: 1px solid var(--hm-border);
+  border-radius: 8px;
+  padding: 1.05rem 1.15rem 0.8rem;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+div[data-testid="stTabs"] div[role="tablist"] {
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--hm-border);
+}
+
+div[data-testid="stTabs"] button[role="tab"] {
+  min-height: 44px;
+  padding: 0.35rem 1rem;
+  border: 1px solid var(--hm-border);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--hm-muted);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+  background: var(--hm-surface);
+  border-color: #b8d8cf;
+  border-top: 4px solid var(--hm-teal);
+  color: var(--hm-teal);
+}
+
+.stButton > button,
+.stForm button {
+  border-color: var(--hm-teal);
+  border-radius: 8px;
+  color: var(--hm-teal-dark);
+  font-weight: 650;
+}
+
+.stButton > button:hover,
+.stForm button:hover {
+  border-color: var(--hm-teal-dark);
+  color: var(--hm-teal-dark);
+  background: var(--hm-surface-soft);
+}
+
+button[kind="primary"],
+.stForm button[kind="primary"] {
+  border-color: var(--hm-teal);
+  background: var(--hm-teal);
+  color: #ffffff;
+}
+
+button[kind="primary"]:hover,
+.stForm button[kind="primary"]:hover {
+  border-color: var(--hm-teal-dark);
+  background: var(--hm-teal-dark);
+  color: #ffffff;
+}
+
+div[data-testid="stMetric"] {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--hm-border);
+  border-radius: 8px;
+  background: var(--hm-surface);
+}
+
+div[data-testid="stDataFrame"] {
+  border-left: 5px solid var(--hm-teal);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(34, 49, 44, 0.06);
+}
+
+div[data-testid="stAlert"] {
+  border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+  .hm-hero {
+    align-items: flex-start;
+    padding: 0.9rem;
+  }
+
+  .hm-icon {
+    flex-basis: 46px;
+    width: 46px;
+    height: 46px;
+  }
+
+  .hm-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .hm-title {
+    font-size: 1.55rem;
+  }
+}

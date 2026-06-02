@@ -13,7 +13,6 @@
     - Observations
     - Correlations
     - Monthly summaries
-- Add some color and UI improvements
 
 
 ## Later
@@ -52,3 +51,6 @@
 - Daily carbs, protein, and fats tracking
 - Daily fasting tracking
 - Electrolyte notes
+- Version 1.0.3 color and heading polish
+- Shared CSS styling across tabs
+- Health icon header

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from pathlib import Path
 
 import streamlit as st
 
@@ -18,14 +19,49 @@ from src.data_model import HealthEntry, ValidationError
 from src.storage import DEFAULT_CSV_PATH, load_entries, save_entry
 
 
-st.set_page_config(page_title="Health Monitor", page_icon="HM", layout="wide")
+APP_VERSION = "1.0.3"
+STYLE_PATH = Path(__file__).parent / "assets" / "styles.css"
 
-st.title("Personal Health Monitor")
-st.caption("Version 1.0.2")
-st.caption(
-    "Track glucose, ketones, sleep, headache, migraine status, energy, mood, diet, medication use, and notes. "
-    "For personal insight only, not medical advice."
-)
+
+def load_css() -> None:
+    st.markdown(f"<style>{STYLE_PATH.read_text()}</style>", unsafe_allow_html=True)
+
+
+def page_header() -> None:
+    st.markdown(
+        f"""
+        <header class="hm-hero">
+          <div class="hm-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" role="img">
+              <path fill="currentColor" d="M24 42s-1.2-1-2.9-2.5C10.6 30.2 5 24.7 5 16.4C5 10.5 9.5 6 15.3 6c3.3 0 6.5 1.6 8.7 4.2C26.2 7.6 29.4 6 32.7 6C38.5 6 43 10.5 43 16.4c0 8.3-5.6 13.8-16.1 23.1C25.2 41 24 42 24 42Z"/>
+              <path fill="#ffffff" d="M21 16h6v7h7v6h-7v7h-6v-7h-7v-6h7z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="hm-title">Personal Health Monitor</h1>
+            <p class="hm-subtitle">
+              Track glucose, ketones, sleep, headache, migraine status, energy, mood, diet, medication use,
+              and notes. For personal insight only, not medical advice.
+            </p>
+            <span class="hm-version">Version {APP_VERSION}</span>
+          </div>
+        </header>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def section_heading(label: str) -> None:
+    st.markdown(f'<h2 class="hm-section-heading">{label}</h2>', unsafe_allow_html=True)
+
+
+def section_heading_small(label: str) -> None:
+    st.markdown(f'<h3 class="hm-section-heading-small">{label}</h3>', unsafe_allow_html=True)
+
+
+st.set_page_config(page_title="Health Monitor", page_icon="HM", layout="wide")
+load_css()
+page_header()
 
 
 def yes_no_label(value: bool) -> str:
@@ -147,7 +183,7 @@ def load_entry_into_form(entries) -> None:
     if entries.empty:
         return
 
-    st.subheader("Find Existing Entry")
+    section_heading_small("Create New or Edit Existing Entry")
     lookup_date = st.date_input("Entry date to edit", value=date.today(), key="lookup_date")
     lookup_date_string = lookup_date.isoformat()
 
@@ -179,7 +215,7 @@ def load_entry_into_form(entries) -> None:
 
 def entry_form() -> None:
     _init_form_state()
-    st.subheader("Daily Entry")
+    section_heading("Daily Entry")
 
     existing_entries = load_entries()
     existing_dates = set(existing_entries["date"].astype(str)) if not existing_entries.empty else set()
@@ -263,7 +299,7 @@ def entry_form() -> None:
 
 def diet_form() -> None:
     _init_form_state()
-    st.subheader("Diet Entry")
+    section_heading("Diet Entry")
 
     entries = load_entries()
     diet_date = st.date_input("Date", key="diet_date")
@@ -326,7 +362,7 @@ def diet_form() -> None:
 
 
 def diet_entries_section(entries) -> None:
-    st.subheader("Recent Diet Entries")
+    section_heading("Recent Diet Entries")
     if entries.empty:
         st.info("Diet entries will appear after you save Daily Health and Diet data.")
         return
@@ -341,13 +377,13 @@ def diet_entries_section(entries) -> None:
     ]
     display = entries[diet_columns].tail(10).sort_values("date", ascending=False).copy()
     display["fasting_yes_no"] = display["fasting_yes_no"].map(yes_no_label)
-    st.dataframe(display, use_container_width=True, hide_index=True)
+    st.dataframe(display, width="stretch", hide_index=True)
 
 
 def recent_entries_section() -> None:
     entries = load_entries()
 
-    st.subheader("Recent Entries")
+    section_heading("Recent Entries")
     if entries.empty:
         st.info("No entries yet. Save your first daily entry above.")
         return
@@ -355,13 +391,13 @@ def recent_entries_section() -> None:
     display = entries.tail(10).sort_values("date", ascending=False).copy()
     display["migraine_yes_no"] = display["migraine_yes_no"].map(yes_no_label)
     display["rizatriptan_taken_yes_no"] = display["rizatriptan_taken_yes_no"].map(yes_no_label)
-    st.dataframe(display, use_container_width=True, hide_index=True)
+    st.dataframe(display, width="stretch", hide_index=True)
 
 
 def charts_section() -> None:
     entries = load_entries()
 
-    st.subheader("Charts")
+    section_heading("Charts")
     if entries.empty:
         st.info("Charts will appear after you save data.")
         return
@@ -371,32 +407,32 @@ def charts_section() -> None:
     with tabs[0]:
         col1, col2 = st.columns(2)
         with col1:
-            st.plotly_chart(glucose_over_time_chart(entries), use_container_width=True)
-            st.plotly_chart(headache_over_time_chart(entries), use_container_width=True)
+            st.plotly_chart(glucose_over_time_chart(entries), width="stretch")
+            st.plotly_chart(headache_over_time_chart(entries), width="stretch")
         with col2:
-            st.plotly_chart(ketones_over_time_chart(entries), use_container_width=True)
-            st.plotly_chart(energy_over_time_chart(entries), use_container_width=True)
-            st.plotly_chart(mood_stability_over_time_chart(entries), use_container_width=True)
-            st.plotly_chart(sleep_hours_over_time_chart(entries), use_container_width=True)
+            st.plotly_chart(ketones_over_time_chart(entries), width="stretch")
+            st.plotly_chart(energy_over_time_chart(entries), width="stretch")
+            st.plotly_chart(mood_stability_over_time_chart(entries), width="stretch")
+            st.plotly_chart(sleep_hours_over_time_chart(entries), width="stretch")
 
     with tabs[1]:
         col1, col2 = st.columns(2)
         with col1:
             st.plotly_chart(
                 relationship_chart(entries, "glucose_mg_dl", "headache_severity_0_to_10", "Glucose vs Headache"),
-                use_container_width=True,
+                width="stretch",
             )
         with col2:
             st.plotly_chart(
                 relationship_chart(entries, "ketones_mmol_l", "energy_1_to_10", "Ketones vs Energy"),
-                use_container_width=True,
+                width="stretch",
             )
 
 
 def observations_section() -> None:
     entries = load_entries()
 
-    st.subheader("Observations")
+    section_heading("Observations")
     if entries.empty:
         st.info("Observations will appear after you save data.")
         return
@@ -410,7 +446,7 @@ def observations_section() -> None:
     metric_cols[3].metric("High headache days", observations["high_headache_days"])
 
     st.write("These are simple observations from your logged data, not medical conclusions.")
-    st.dataframe(observations["migraine_comparison"], use_container_width=True, hide_index=True)
+    st.dataframe(observations["migraine_comparison"], width="stretch", hide_index=True)
 
 
 daily_health_tab, diet_tab = st.tabs(["Daily Health", "Diet"])
@@ -427,4 +463,4 @@ with daily_health_tab:
 with diet_tab:
     diet_form()
 
-st.caption(f"Data file: {DEFAULT_CSV_PATH}")
+st.markdown(f'<p class="hm-data-file">Data file: {DEFAULT_CSV_PATH}</p>', unsafe_allow_html=True)
