@@ -21,6 +21,11 @@ class HealthEntry:
     sleep_hours: float
     rizatriptan_taken_yes_no: bool
     notes: str = ""
+    carbs_g: float = 0.0
+    protein_g: float = 0.0
+    fats_g: float = 0.0
+    fasting_yes_no: bool = False
+    electrolyte_notes: str = ""
 
     def __post_init__(self) -> None:
         self._validate()
@@ -49,6 +54,15 @@ class HealthEntry:
 
         if not 0 <= self.sleep_hours <= 14:
             raise ValidationError("Sleep hours must be between 0 and 14.")
+
+        if self.carbs_g < 0:
+            raise ValidationError("Carbs cannot be negative.")
+
+        if self.protein_g < 0:
+            raise ValidationError("Protein cannot be negative.")
+
+        if self.fats_g < 0:
+            raise ValidationError("Fats cannot be negative.")
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)

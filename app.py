@@ -21,9 +21,9 @@ from src.storage import DEFAULT_CSV_PATH, load_entries, save_entry
 st.set_page_config(page_title="Health Monitor", page_icon="HM", layout="wide")
 
 st.title("Personal Health Monitor")
-st.caption("Version 1.0.1")
+st.caption("Version 1.0.2")
 st.caption(
-    "Track glucose, ketones, sleep, headache, migraine status, energy, mood, medication use, and notes. "
+    "Track glucose, ketones, sleep, headache, migraine status, energy, mood, diet, medication use, and notes. "
     "For personal insight only, not medical advice."
 )
 
@@ -41,8 +41,17 @@ def _parse_time(value: object) -> time:
         return datetime.now().time().replace(second=0, microsecond=0)
 
 
+def _is_missing(value: object) -> bool:
+    if value is None:
+        return True
+    try:
+        return bool(value != value)
+    except (TypeError, ValueError):
+        return False
+
+
 def _float_or_default(value: object, default: float) -> float:
-    if value != value:
+    if _is_missing(value):
         return default
     try:
         return default if value is None else float(value)
@@ -51,12 +60,61 @@ def _float_or_default(value: object, default: float) -> float:
 
 
 def _int_or_default(value: object, default: int) -> int:
-    if value != value:
+    if _is_missing(value):
         return default
     try:
         return default if value is None else int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _bool_or_default(value: object, default: bool = False) -> bool:
+    if _is_missing(value):
+        return default
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    return str(value).strip().lower() in {"true", "1", "yes", "y"}
+
+
+def _text_or_default(value: object, default: str = "") -> str:
+    if _is_missing(value):
+        return default
+    return str(value)
+
+
+def _entry_for_date(entries, entry_date: str):
+    if entries.empty:
+        return None
+    matching_entries = entries[entries["date"].astype(str) == entry_date]
+    if matching_entries.empty:
+        return None
+    return matching_entries.iloc[-1]
+
+
+def _entry_from_row(row, **overrides: object) -> HealthEntry:
+    values = {
+        "date": str(row["date"]),
+        "reading_time": str(row["reading_time"]),
+        "glucose_mg_dl": _float_or_default(row["glucose_mg_dl"], 90.0),
+        "ketones_mmol_l": _float_or_default(row["ketones_mmol_l"], 0.5),
+        "headache_severity_0_to_10": _int_or_default(row["headache_severity_0_to_10"], 0),
+        "migraine_yes_no": _bool_or_default(row["migraine_yes_no"]),
+        "energy_1_to_10": _int_or_default(row["energy_1_to_10"], 5),
+        "mood_stability_1_to_10": _int_or_default(row["mood_stability_1_to_10"], 5),
+        "sleep_quality": _text_or_default(row["sleep_quality"], "Good"),
+        "sleep_hours": _float_or_default(row["sleep_hours"], 8.0),
+        "rizatriptan_taken_yes_no": _bool_or_default(row["rizatriptan_taken_yes_no"]),
+        "notes": _text_or_default(row["notes"]),
+        "carbs_g": _float_or_default(row.get("carbs_g"), 0.0),
+        "protein_g": _float_or_default(row.get("protein_g"), 0.0),
+        "fats_g": _float_or_default(row.get("fats_g"), 0.0),
+        "fasting_yes_no": _bool_or_default(row.get("fasting_yes_no")),
+        "electrolyte_notes": _text_or_default(row.get("electrolyte_notes")),
+    }
+    values.update(overrides)
+    return HealthEntry(**values)
 
 
 def _init_form_state() -> None:
@@ -74,6 +132,12 @@ def _init_form_state() -> None:
         "rizatriptan": False,
         "overwrite_existing_date": False,
         "notes": "",
+        "diet_date": date.today(),
+        "carbs_g": 0.0,
+        "protein_g": 0.0,
+        "fats_g": 0.0,
+        "fasting": False,
+        "electrolyte_notes": "",
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -162,6 +226,17 @@ def entry_form() -> None:
         st.warning("An entry already exists for this date. Check update/replace if you want to edit it.")
         return
 
+    existing_entry = _entry_for_date(existing_entries, date_string)
+    diet_values = {}
+    if existing_entry is not None:
+        diet_values = {
+            "carbs_g": _float_or_default(existing_entry.get("carbs_g"), 0.0),
+            "protein_g": _float_or_default(existing_entry.get("protein_g"), 0.0),
+            "fats_g": _float_or_default(existing_entry.get("fats_g"), 0.0),
+            "fasting_yes_no": _bool_or_default(existing_entry.get("fasting_yes_no")),
+            "electrolyte_notes": _text_or_default(existing_entry.get("electrolyte_notes")),
+        }
+
     try:
         entry = HealthEntry(
             date=date_string,
@@ -176,6 +251,7 @@ def entry_form() -> None:
             sleep_hours=st.session_state.sleep_hours,
             rizatriptan_taken_yes_no=st.session_state.rizatriptan,
             notes=st.session_state.notes.strip(),
+            **diet_values,
         )
         save_entry(entry, overwrite=st.session_state.overwrite_existing_date)
     except ValidationError as error:
@@ -183,6 +259,89 @@ def entry_form() -> None:
         return
 
     st.success(f"Saved entry for {date_string}.")
+
+
+def diet_form() -> None:
+    _init_form_state()
+    st.subheader("Diet Entry")
+
+    entries = load_entries()
+    diet_date = st.date_input("Date", key="diet_date")
+    diet_date_string = diet_date.isoformat()
+    existing_entry = _entry_for_date(entries, diet_date_string)
+
+    if st.button("Load diet for date"):
+        if existing_entry is None:
+            st.warning(f"No daily health entry found for {diet_date_string}. Save Daily Health first.")
+        else:
+            st.session_state.carbs_g = _float_or_default(existing_entry.get("carbs_g"), 0.0)
+            st.session_state.protein_g = _float_or_default(existing_entry.get("protein_g"), 0.0)
+            st.session_state.fats_g = _float_or_default(existing_entry.get("fats_g"), 0.0)
+            st.session_state.fasting = _bool_or_default(existing_entry.get("fasting_yes_no"))
+            st.session_state.electrolyte_notes = _text_or_default(existing_entry.get("electrolyte_notes"))
+            st.success(f"Loaded diet entry for {diet_date_string}.")
+
+    with st.form("diet_entry_form"):
+        left, middle, right = st.columns(3)
+
+        with left:
+            st.number_input("Carbs (g)", min_value=0.0, step=1.0, key="carbs_g")
+            st.number_input("Protein (g)", min_value=0.0, step=1.0, key="protein_g")
+
+        with middle:
+            st.number_input("Fats (g)", min_value=0.0, step=1.0, key="fats_g")
+            st.checkbox("Fasting", key="fasting")
+
+        with right:
+            st.text_area("Electrolyte notes", height=130, key="electrolyte_notes")
+
+        submitted = st.form_submit_button("Save diet entry", type="primary")
+
+    if not submitted:
+        diet_entries_section(entries)
+        return
+
+    if existing_entry is None:
+        st.warning(f"No daily health entry found for {diet_date_string}. Save Daily Health first, then add diet.")
+        diet_entries_section(entries)
+        return
+
+    try:
+        entry = _entry_from_row(
+            existing_entry,
+            carbs_g=st.session_state.carbs_g,
+            protein_g=st.session_state.protein_g,
+            fats_g=st.session_state.fats_g,
+            fasting_yes_no=st.session_state.fasting,
+            electrolyte_notes=st.session_state.electrolyte_notes.strip(),
+        )
+        save_entry(entry, overwrite=True)
+    except ValidationError as error:
+        st.error(str(error))
+        diet_entries_section(entries)
+        return
+
+    st.success(f"Saved diet entry for {diet_date_string}.")
+    diet_entries_section(load_entries())
+
+
+def diet_entries_section(entries) -> None:
+    st.subheader("Recent Diet Entries")
+    if entries.empty:
+        st.info("Diet entries will appear after you save Daily Health and Diet data.")
+        return
+
+    diet_columns = [
+        "date",
+        "carbs_g",
+        "protein_g",
+        "fats_g",
+        "fasting_yes_no",
+        "electrolyte_notes",
+    ]
+    display = entries[diet_columns].tail(10).sort_values("date", ascending=False).copy()
+    display["fasting_yes_no"] = display["fasting_yes_no"].map(yes_no_label)
+    st.dataframe(display, use_container_width=True, hide_index=True)
 
 
 def recent_entries_section() -> None:
@@ -254,12 +413,18 @@ def observations_section() -> None:
     st.dataframe(observations["migraine_comparison"], use_container_width=True, hide_index=True)
 
 
-entry_form()
-st.divider()
-recent_entries_section()
-st.divider()
-charts_section()
-st.divider()
-observations_section()
+daily_health_tab, diet_tab = st.tabs(["Daily Health", "Diet"])
+
+with daily_health_tab:
+    entry_form()
+    st.divider()
+    recent_entries_section()
+    st.divider()
+    charts_section()
+    st.divider()
+    observations_section()
+
+with diet_tab:
+    diet_form()
 
 st.caption(f"Data file: {DEFAULT_CSV_PATH}")

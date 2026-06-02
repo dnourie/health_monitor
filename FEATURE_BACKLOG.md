@@ -1,22 +1,18 @@
 # Feature Backlog
 
 ## Next / High Priority
-- Create additional tabs for diet and analysis
-    Diet
-    - Carbs (g)
-    - Protein (g)
-    - Fats (g)
-    - Calories (optional)
-    - Fasting yes/no
-    - Electrolytes notes
-    Analysis
+- Create additional tab for analysis
     - Content currently on front page
-    - For Diet
-        Charts
-        Rolling averages
-        Observations
-        Correlations
-        Monthly summaries
+    - Diet charts
+    - Macro-only analysis, no individual food tracking
+    - Glucose vs carbs, protein, and fats
+    - Headache and migraine vs same-day macros
+    - Headache and migraine vs previous-day macros
+    - Fasting days vs headache and migraine days
+    - Rolling averages
+    - Observations
+    - Correlations
+    - Monthly summaries
 - Add some color and UI improvements
 
 
@@ -52,3 +48,7 @@
 - GitHub repository updated with planning and auto-start changes
 - Version 1.0.1 sleep hours tracking
 - Version 1.0.1 mood stability tracking
+- Version 1.0.2 Diet tab
+- Daily carbs, protein, and fats tracking
+- Daily fasting tracking
+- Electrolyte notes

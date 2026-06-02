@@ -24,6 +24,11 @@ CSV_COLUMNS = [
     "sleep_quality",
     "sleep_hours",
     "rizatriptan_taken_yes_no",
+    "carbs_g",
+    "protein_g",
+    "fats_g",
+    "fasting_yes_no",
+    "electrolyte_notes",
     "notes",
 ]
 
@@ -89,6 +94,11 @@ def prepare_entries(entries: pd.DataFrame) -> pd.DataFrame:
     prepared["sleep_hours"] = pd.to_numeric(prepared["sleep_hours"], errors="coerce").fillna(8.0)
     prepared["migraine_yes_no"] = prepared["migraine_yes_no"].map(_to_bool)
     prepared["rizatriptan_taken_yes_no"] = prepared["rizatriptan_taken_yes_no"].map(_to_bool)
+    prepared["carbs_g"] = pd.to_numeric(prepared["carbs_g"], errors="coerce").fillna(0.0)
+    prepared["protein_g"] = pd.to_numeric(prepared["protein_g"], errors="coerce").fillna(0.0)
+    prepared["fats_g"] = pd.to_numeric(prepared["fats_g"], errors="coerce").fillna(0.0)
+    prepared["fasting_yes_no"] = prepared["fasting_yes_no"].map(_to_bool)
+    prepared["electrolyte_notes"] = prepared["electrolyte_notes"].fillna("")
     prepared = prepared.sort_values("date").reset_index(drop=True)
     return prepared
 
