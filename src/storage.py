@@ -20,7 +20,9 @@ CSV_COLUMNS = [
     "headache_severity_0_to_10",
     "migraine_yes_no",
     "energy_1_to_10",
+    "mood_stability_1_to_10",
     "sleep_quality",
+    "sleep_hours",
     "rizatriptan_taken_yes_no",
     "notes",
 ]
@@ -80,7 +82,11 @@ def prepare_entries(entries: pd.DataFrame) -> pd.DataFrame:
         prepared["headache_severity_0_to_10"], errors="coerce"
     )
     prepared["energy_1_to_10"] = pd.to_numeric(prepared["energy_1_to_10"], errors="coerce")
+    prepared["mood_stability_1_to_10"] = pd.to_numeric(
+        prepared["mood_stability_1_to_10"], errors="coerce"
+    ).fillna(5)
     prepared["sleep_quality"] = prepared["sleep_quality"].map(_to_sleep_quality)
+    prepared["sleep_hours"] = pd.to_numeric(prepared["sleep_hours"], errors="coerce").fillna(8.0)
     prepared["migraine_yes_no"] = prepared["migraine_yes_no"].map(_to_bool)
     prepared["rizatriptan_taken_yes_no"] = prepared["rizatriptan_taken_yes_no"].map(_to_bool)
     prepared = prepared.sort_values("date").reset_index(drop=True)

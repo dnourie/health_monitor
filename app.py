@@ -10,7 +10,9 @@ from src.charts import (
     glucose_over_time_chart,
     headache_over_time_chart,
     ketones_over_time_chart,
+    mood_stability_over_time_chart,
     relationship_chart,
+    sleep_hours_over_time_chart,
 )
 from src.data_model import HealthEntry, ValidationError
 from src.storage import DEFAULT_CSV_PATH, load_entries, save_entry
@@ -19,9 +21,9 @@ from src.storage import DEFAULT_CSV_PATH, load_entries, save_entry
 st.set_page_config(page_title="Health Monitor", page_icon="HM", layout="wide")
 
 st.title("Personal Health Monitor")
-st.caption("Version 1.0.0")
+st.caption("Version 1.0.1")
 st.caption(
-    "Track glucose, ketones, headache, migraine status, energy, medication use, and notes. "
+    "Track glucose, ketones, sleep, headache, migraine status, energy, mood, medication use, and notes. "
     "For personal insight only, not medical advice."
 )
 
@@ -39,6 +41,24 @@ def _parse_time(value: object) -> time:
         return datetime.now().time().replace(second=0, microsecond=0)
 
 
+def _float_or_default(value: object, default: float) -> float:
+    if value != value:
+        return default
+    try:
+        return default if value is None else float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _int_or_default(value: object, default: int) -> int:
+    if value != value:
+        return default
+    try:
+        return default if value is None else int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _init_form_state() -> None:
     defaults = {
         "entry_date": date.today(),
@@ -47,7 +67,9 @@ def _init_form_state() -> None:
         "ketones_mmol_l": 0.5,
         "headache_severity": 0,
         "energy": 5,
+        "mood_stability": 5,
         "sleep_quality": "Good",
+        "sleep_hours": 8.0,
         "migraine": False,
         "rizatriptan": False,
         "overwrite_existing_date": False,
@@ -80,7 +102,9 @@ def load_entry_into_form(entries) -> None:
     st.session_state.ketones_mmol_l = float(entry["ketones_mmol_l"])
     st.session_state.headache_severity = int(entry["headache_severity_0_to_10"])
     st.session_state.energy = int(entry["energy_1_to_10"])
+    st.session_state.mood_stability = _int_or_default(entry.get("mood_stability_1_to_10"), 5)
     st.session_state.sleep_quality = str(entry.get("sleep_quality", "Good"))
+    st.session_state.sleep_hours = _float_or_default(entry.get("sleep_hours"), 8.0)
     st.session_state.migraine = bool(entry["migraine_yes_no"])
     st.session_state.rizatriptan = bool(entry["rizatriptan_taken_yes_no"])
     st.session_state.overwrite_existing_date = True
@@ -109,9 +133,11 @@ def entry_form() -> None:
             st.number_input("Ketones (mmol/L)", min_value=0.0, max_value=10.0, step=0.1, key="ketones_mmol_l")
             st.slider("Headache severity", min_value=0, max_value=10, key="headache_severity")
             st.slider("Energy", min_value=1, max_value=10, key="energy")
+            st.slider("Mood stability", min_value=1, max_value=10, key="mood_stability")
 
         with right:
             st.radio("Sleep quality", ["Good", "Disrupted", "Poor"], horizontal=True, key="sleep_quality")
+            st.number_input("Sleep hours", min_value=0.0, max_value=14.0, step=0.5, key="sleep_hours")
             st.checkbox("Migraine", key="migraine")
             st.checkbox("Rizatriptan taken", key="rizatriptan")
             st.checkbox("Update/replace entry for this date", key="overwrite_existing_date")
@@ -145,7 +171,9 @@ def entry_form() -> None:
             headache_severity_0_to_10=st.session_state.headache_severity,
             migraine_yes_no=st.session_state.migraine,
             energy_1_to_10=st.session_state.energy,
+            mood_stability_1_to_10=st.session_state.mood_stability,
             sleep_quality=st.session_state.sleep_quality,
+            sleep_hours=st.session_state.sleep_hours,
             rizatriptan_taken_yes_no=st.session_state.rizatriptan,
             notes=st.session_state.notes.strip(),
         )
@@ -189,6 +217,8 @@ def charts_section() -> None:
         with col2:
             st.plotly_chart(ketones_over_time_chart(entries), use_container_width=True)
             st.plotly_chart(energy_over_time_chart(entries), use_container_width=True)
+            st.plotly_chart(mood_stability_over_time_chart(entries), use_container_width=True)
+            st.plotly_chart(sleep_hours_over_time_chart(entries), use_container_width=True)
 
     with tabs[1]:
         col1, col2 = st.columns(2)

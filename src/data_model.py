@@ -16,7 +16,9 @@ class HealthEntry:
     headache_severity_0_to_10: int
     migraine_yes_no: bool
     energy_1_to_10: int
+    mood_stability_1_to_10: int
     sleep_quality: str
+    sleep_hours: float
     rizatriptan_taken_yes_no: bool
     notes: str = ""
 
@@ -39,8 +41,14 @@ class HealthEntry:
         if not 1 <= self.energy_1_to_10 <= 10:
             raise ValidationError("Energy must be between 1 and 10.")
 
+        if not 1 <= self.mood_stability_1_to_10 <= 10:
+            raise ValidationError("Mood stability must be between 1 and 10.")
+
         if self.sleep_quality not in {"Good", "Disrupted", "Poor"}:
             raise ValidationError("Sleep quality must be Good, Disrupted, or Poor.")
+
+        if not 0 <= self.sleep_hours <= 14:
+            raise ValidationError("Sleep hours must be between 0 and 14.")
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)

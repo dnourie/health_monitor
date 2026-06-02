@@ -1,14 +1,14 @@
 # Personal Health Monitor
 
-Version 1.0.0
+Version 1.0.1
 
-A simple local Streamlit app for tracking glucose, ketones, sleep quality, headache symptoms, migraine days, energy, medication use, and notes. The goal is to make it easier to notice possible correlations between these measures over time.
+A simple local Streamlit app for tracking glucose, ketones, sleep quality and hours, headache symptoms, migraine days, energy, mood stability, medication use, and notes. The goal is to make it easier to notice possible correlations between these measures over time.
 
 This project is for personal tracking and reflection only. It is not medical advice, diagnosis, or a replacement for care from a qualified clinician.
 
 ## What It Tracks
 
-The first version keeps the daily form small:
+The daily form keeps the core tracking fields small:
 
 - Date
 - Reading time
@@ -17,7 +17,9 @@ The first version keeps the daily form small:
 - Headache severity from 0 to 10
 - Migraine yes/no
 - Energy from 1 to 10
+- Mood stability from 1 to 10
 - Sleep quality: Good, Disrupted, or Poor
+- Sleep hours from 0 to 14
 - Rizatriptan taken yes/no
 - Notes
 

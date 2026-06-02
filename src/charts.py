@@ -39,6 +39,14 @@ def energy_over_time_chart(entries: pd.DataFrame) -> go.Figure:
     return _line_chart(entries, "energy_1_to_10", "Energy Over Time", "Energy")
 
 
+def mood_stability_over_time_chart(entries: pd.DataFrame) -> go.Figure:
+    return _line_chart(entries, "mood_stability_1_to_10", "Mood Stability Over Time", "Mood stability")
+
+
+def sleep_hours_over_time_chart(entries: pd.DataFrame) -> go.Figure:
+    return _line_chart(entries, "sleep_hours", "Sleep Hours Over Time", "Sleep hours")
+
+
 def relationship_chart(entries: pd.DataFrame, x_column: str, y_column: str, title: str) -> go.Figure:
     chart_data = _chart_data(entries)
     figure = px.scatter(

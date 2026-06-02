@@ -3,7 +3,14 @@ from __future__ import annotations
 import pandas as pd
 
 
-COMPARISON_COLUMNS = ["glucose_mg_dl", "ketones_mmol_l", "energy_1_to_10", "headache_severity_0_to_10"]
+COMPARISON_COLUMNS = [
+    "glucose_mg_dl",
+    "ketones_mmol_l",
+    "energy_1_to_10",
+    "mood_stability_1_to_10",
+    "sleep_hours",
+    "headache_severity_0_to_10",
+]
 
 
 def build_observations(entries: pd.DataFrame) -> dict[str, object]:
