@@ -1,8 +1,8 @@
 # Personal Health Monitor
 
-Version 1.0.3
+Version 1.1.0
 
-A simple local Streamlit app for tracking glucose, ketones, sleep quality and hours, headache symptoms, migraine days, energy, mood stability, diet, medication use, and notes. The goal is to make it easier to notice possible correlations between these measures over time.
+A simple local Streamlit app for tracking glucose, ketones, sleep quality and hours, headache symptoms, migraine days, energy, mood stability, diet, medication use, and notes. It can also import Keto-Mojo CSV exports so glucose, ketone, and GKI readings do not need to be typed manually. The goal is to make it easier to notice possible correlations between these measures over time.
 
 This project is for personal tracking and reflection only. It is not medical advice, diagnosis, or a replacement for care from a qualified clinician.
 
@@ -12,8 +12,8 @@ The daily form keeps the core tracking fields small:
 
 - Date
 - Reading time
-- Glucose in mg/dL
-- Ketones in mmol/L
+- Optional manual glucose in mg/dL
+- Optional manual ketones in mmol/L
 - Headache severity from 0 to 10
 - Migraine yes/no
 - Energy from 1 to 10
@@ -25,6 +25,8 @@ The daily form keeps the core tracking fields small:
 - Fasting yes/no
 - Electrolyte notes
 - Notes
+
+The Keto-Mojo tab imports CSV exports from the meter app. Uploading the full export each week is supported; the app stores imported readings separately and skips duplicate rows automatically.
 
 The notes field is intentionally flexible. It can include weather or rain, stress, unusual foods, fasting, electrolytes, caffeine, exercise, medication details, or anything else that felt relevant that day.
 
@@ -41,6 +43,7 @@ health_monitor/
     analysis.py
     charts.py
     data_model.py
+    ketomojo.py
     storage.py
   notebooks/
     exploratory_analysis.ipynb
@@ -100,6 +103,8 @@ The app stores data locally in:
 
 ```text
 data/health_log.csv
+data/ketomojo_readings.csv
+data/ketomojo_import_history.csv
 ```
 
 The CSV is created automatically the first time you save an entry.
@@ -108,7 +113,7 @@ Personal CSV data is ignored by Git by default so health entries do not get push
 
 ## Future Ideas
 
-- Import glucose and ketone readings from a Keto-Mojo CSV export
+- Add richer Keto-Mojo analytics inside the app
 - Add weather enrichment for rain, precipitation, pressure, humidity, and temperature swings
 - Add monthly Markdown reports for doctor visits
 - Add lag analysis to compare yesterday's factors with today's headache or migraine status

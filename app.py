@@ -3,23 +3,30 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from pathlib import Path
 
+import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from src.analysis import build_observations
 from src.charts import (
     energy_over_time_chart,
-    glucose_over_time_chart,
     headache_over_time_chart,
-    ketones_over_time_chart,
     mood_stability_over_time_chart,
     relationship_chart,
     sleep_hours_over_time_chart,
 )
 from src.data_model import HealthEntry, ValidationError
+from src.ketomojo import (
+    KETOMOJO_READINGS_PATH,
+    build_ketomojo_sessions,
+    import_ketomojo_export,
+    load_import_history,
+    load_ketomojo_readings,
+)
 from src.storage import DEFAULT_CSV_PATH, load_entries, save_entry
 
 
-APP_VERSION = "1.0.3"
+APP_VERSION = "1.1.0"
 STYLE_PATH = Path(__file__).parent / "assets" / "styles.css"
 
 
@@ -153,6 +160,40 @@ def _entry_from_row(row, **overrides: object) -> HealthEntry:
     return HealthEntry(**values)
 
 
+def _entries_with_imported_glucose_ketones(entries):
+    if entries.empty:
+        return entries
+
+    readings = load_ketomojo_readings()
+    sessions = build_ketomojo_sessions(readings)
+    if sessions.empty:
+        return entries
+
+    latest_sessions = (
+        sessions.dropna(subset=["date"])
+        .sort_values("session_time")
+        .groupby("date", as_index=False)
+        .tail(1)
+    )
+    imported_values = latest_sessions[
+        ["date", "glucose", "ketone", "glucose_ketone_index", "session_time"]
+    ].rename(
+        columns={
+            "glucose": "imported_glucose_mg_dl",
+            "ketone": "imported_ketones_mmol_l",
+            "glucose_ketone_index": "imported_gki",
+            "session_time": "imported_reading_time",
+        }
+    )
+
+    display_entries = entries.copy()
+    display_entries["date"] = display_entries["date"].astype(str)
+    merged = display_entries.merge(imported_values, on="date", how="left")
+    merged["glucose_mg_dl"] = merged["imported_glucose_mg_dl"].combine_first(merged["glucose_mg_dl"])
+    merged["ketones_mmol_l"] = merged["imported_ketones_mmol_l"].combine_first(merged["ketones_mmol_l"])
+    return merged
+
+
 def _init_form_state() -> None:
     defaults = {
         "entry_date": date.today(),
@@ -227,10 +268,11 @@ def entry_form() -> None:
         with left:
             st.date_input("Date", key="entry_date")
             st.time_input("Reading time", key="reading_time")
-            st.number_input("Glucose (mg/dL)", min_value=0.0, max_value=500.0, step=1.0, key="glucose_mg_dl")
+            with st.expander("Manual glucose/ketone entry"):
+                st.number_input("Glucose (mg/dL)", min_value=0.0, max_value=500.0, step=1.0, key="glucose_mg_dl")
+                st.number_input("Ketones (mmol/L)", min_value=0.0, max_value=10.0, step=0.1, key="ketones_mmol_l")
 
         with middle:
-            st.number_input("Ketones (mmol/L)", min_value=0.0, max_value=10.0, step=0.1, key="ketones_mmol_l")
             st.slider("Headache severity", min_value=0, max_value=10, key="headache_severity")
             st.slider("Energy", min_value=1, max_value=10, key="energy")
             st.slider("Mood stability", min_value=1, max_value=10, key="mood_stability")
@@ -388,45 +430,33 @@ def recent_entries_section() -> None:
         st.info("No entries yet. Save your first daily entry above.")
         return
 
-    display = entries.tail(10).sort_values("date", ascending=False).copy()
+    display = _entries_with_imported_glucose_ketones(entries).tail(10).sort_values("date", ascending=False).copy()
+    if "imported_gki" in display.columns:
+        display["imported_reading_time"] = (
+            pd.to_datetime(display["imported_reading_time"], utc=True, errors="coerce")
+            .dt.tz_convert("America/Chicago")
+            .dt.strftime("%H:%M")
+        )
     display["migraine_yes_no"] = display["migraine_yes_no"].map(yes_no_label)
     display["rizatriptan_taken_yes_no"] = display["rizatriptan_taken_yes_no"].map(yes_no_label)
-    st.dataframe(display, width="stretch", hide_index=True)
-
-
-def charts_section() -> None:
-    entries = load_entries()
-
-    section_heading("Charts")
-    if entries.empty:
-        st.info("Charts will appear after you save data.")
-        return
-
-    tabs = st.tabs(["Trends", "Relationships"])
-
-    with tabs[0]:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.plotly_chart(glucose_over_time_chart(entries), width="stretch")
-            st.plotly_chart(headache_over_time_chart(entries), width="stretch")
-        with col2:
-            st.plotly_chart(ketones_over_time_chart(entries), width="stretch")
-            st.plotly_chart(energy_over_time_chart(entries), width="stretch")
-            st.plotly_chart(mood_stability_over_time_chart(entries), width="stretch")
-            st.plotly_chart(sleep_hours_over_time_chart(entries), width="stretch")
-
-    with tabs[1]:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.plotly_chart(
-                relationship_chart(entries, "glucose_mg_dl", "headache_severity_0_to_10", "Glucose vs Headache"),
-                width="stretch",
-            )
-        with col2:
-            st.plotly_chart(
-                relationship_chart(entries, "ketones_mmol_l", "energy_1_to_10", "Ketones vs Energy"),
-                width="stretch",
-            )
+    display_columns = [
+        "date",
+        "reading_time",
+        "glucose_mg_dl",
+        "ketones_mmol_l",
+        "imported_gki",
+        "imported_reading_time",
+        "headache_severity_0_to_10",
+        "migraine_yes_no",
+        "energy_1_to_10",
+        "mood_stability_1_to_10",
+        "sleep_quality",
+        "sleep_hours",
+        "rizatriptan_taken_yes_no",
+        "notes",
+    ]
+    available_columns = [column for column in display_columns if column in display.columns]
+    st.dataframe(display[available_columns], width="stretch", hide_index=True)
 
 
 def observations_section() -> None:
@@ -437,6 +467,7 @@ def observations_section() -> None:
         st.info("Observations will appear after you save data.")
         return
 
+    entries = _entries_with_imported_glucose_ketones(entries)
     observations = build_observations(entries)
 
     metric_cols = st.columns(4)
@@ -449,18 +480,303 @@ def observations_section() -> None:
     st.dataframe(observations["migraine_comparison"], width="stretch", hide_index=True)
 
 
-daily_health_tab, diet_tab = st.tabs(["Daily Health", "Diet"])
+def ketomojo_import_section() -> None:
+    section_heading("Keto-Mojo Import")
+    uploaded_file = st.file_uploader(
+        "Upload Keto-Mojo CSV export",
+        type=["csv"],
+        help="Uploading the full export each week is fine. Existing readings are skipped automatically.",
+    )
+
+    if uploaded_file is not None:
+        if st.button("Import Keto-Mojo readings", type="primary"):
+            try:
+                result = import_ketomojo_export(uploaded_file, file_name=uploaded_file.name)
+            except ValueError as error:
+                st.error(str(error))
+            else:
+                st.success(
+                    f"Imported {result.new_rows} new rows from {result.file_name}. "
+                    f"Skipped {result.duplicate_rows} duplicates."
+                )
+                st.caption(f"File range: {result.first_reading} to {result.last_reading}")
+
+
+def ketomojo_summary_section() -> None:
+    readings = load_ketomojo_readings()
+    sessions = build_ketomojo_sessions(readings)
+
+    section_heading("Keto-Mojo Readings")
+    if readings.empty:
+        st.info("Imported Keto-Mojo readings will appear here after you upload a CSV export.")
+        return
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Raw readings", len(readings))
+    metric_cols[1].metric("Testing sessions", len(sessions))
+    metric_cols[2].metric("First reading", readings["date"].min())
+    metric_cols[3].metric("Last reading", readings["date"].max())
+
+    if not sessions.empty:
+        latest = sessions.sort_values("session_time").tail(10).sort_values("session_time", ascending=False).copy()
+        latest["session_time"] = latest["session_time"].dt.strftime("%Y-%m-%d %H:%M")
+        display_columns = [
+            "session_time",
+            "glucose",
+            "ketone",
+            "glucose_ketone_index",
+            "time_of_day",
+            "readings_in_session",
+        ]
+        st.dataframe(latest[display_columns], width="stretch", hide_index=True)
+
+    with st.expander("Raw imported readings"):
+        raw_display = readings.tail(25).sort_values("local_time", ascending=False).copy()
+        st.dataframe(
+            raw_display[
+                [
+                    "local_time",
+                    "reading_type",
+                    "reading_value",
+                    "reading_unit",
+                    "source",
+                    "reading_id",
+                ]
+            ],
+            width="stretch",
+            hide_index=True,
+        )
+
+
+def ketomojo_history_section() -> None:
+    history = load_import_history()
+
+    section_heading("Import History")
+    if history.empty:
+        st.info("Import history will appear after your first Keto-Mojo upload.")
+        return
+
+    display = history.tail(10).sort_values("imported_at", ascending=False)
+    st.dataframe(display, width="stretch", hide_index=True)
+
+
+def ketomojo_measure_chart(sessions, y_column: str, title: str, y_label: str):
+    chart_data = sessions.dropna(subset=[y_column]).copy()
+    chart_data["session_time"] = pd.to_datetime(chart_data["session_time"])
+    chart_data = chart_data.sort_values("session_time")
+    figure = px.line(chart_data, x="session_time", y=y_column, markers=True, title=title)
+    figure.update_layout(xaxis_title="Date", yaxis_title=y_label)
+    return figure
+
+
+def ketomojo_rolling_chart(sessions):
+    chart_data = sessions.copy()
+    chart_data["session_time"] = pd.to_datetime(chart_data["session_time"])
+    chart_data = chart_data.set_index("session_time")[["glucose", "ketone", "glucose_ketone_index"]]
+    rolling = chart_data.rolling("14D", min_periods=3).mean().reset_index()
+    rolling_long = rolling.melt(
+        id_vars="session_time",
+        value_vars=["glucose", "ketone", "glucose_ketone_index"],
+        var_name="measure",
+        value_name="rolling_mean",
+    ).dropna()
+    figure = px.line(
+        rolling_long,
+        x="session_time",
+        y="rolling_mean",
+        color="measure",
+        facet_row="measure",
+        title="Keto-Mojo 14-Day Rolling Averages",
+    )
+    figure.update_yaxes(matches=None)
+    figure.update_layout(xaxis_title="Date", yaxis_title="Rolling mean", showlegend=False)
+    return figure
+
+
+def ketomojo_time_of_day_chart(sessions):
+    chart_data = sessions.melt(
+        id_vars=["time_of_day"],
+        value_vars=["glucose", "ketone", "glucose_ketone_index"],
+        var_name="measure",
+        value_name="value",
+    ).dropna()
+    figure = px.box(
+        chart_data,
+        x="time_of_day",
+        y="value",
+        color="measure",
+        facet_row="measure",
+        points="all",
+        title="Keto-Mojo Patterns by Time of Day",
+    )
+    figure.update_yaxes(matches=None)
+    figure.update_layout(xaxis_title="Time of day", yaxis_title="Value", showlegend=False)
+    return figure
+
+
+def ketomojo_gki_category_chart(sessions):
+    categories = pd.cut(
+        sessions["glucose_ketone_index"].dropna(),
+        bins=[-float("inf"), 1, 3, 6, 9, float("inf")],
+        labels=["<=1", "1-3", "3-6", "6-9", ">9"],
+    )
+    counts = categories.value_counts().sort_index().rename_axis("GKI range").reset_index(name="sessions")
+    figure = px.bar(counts, x="GKI range", y="sessions", title="GKI Category Counts")
+    figure.update_layout(xaxis_title="GKI range", yaxis_title="Sessions")
+    return figure
+
+
+def analytics_summary_section(entries, sessions) -> None:
+    section_heading("Analytics Summary")
+
+    if sessions.empty:
+        st.info("Keto-Mojo analytics will appear after you import readings.")
+        return
+
+    latest = sessions.sort_values("session_time").iloc[-1]
+    metric_cols = st.columns(5)
+    metric_cols[0].metric("Sessions", len(sessions))
+    metric_cols[1].metric("Latest glucose", _format_metric(latest.get("glucose"), "mg/dL"))
+    metric_cols[2].metric("Latest ketones", _format_metric(latest.get("ketone"), "mmol/L"))
+    metric_cols[3].metric("Latest GKI", _format_metric(latest.get("glucose_ketone_index")))
+    metric_cols[4].metric("Health log days", len(entries))
+
+    averages = _ketomojo_window_averages(sessions)
+    st.dataframe(averages, width="stretch", hide_index=True)
+
+
+def analytics_trends_section(sessions) -> None:
+    section_heading("Keto-Mojo Trends")
+    if sessions.empty:
+        st.info("Trend charts will appear after you import Keto-Mojo readings.")
+        return
+
+    tabs = st.tabs(["Glucose", "Ketones", "GKI", "Rolling"])
+    with tabs[0]:
+        st.plotly_chart(
+            ketomojo_measure_chart(sessions, "glucose", "Glucose Over Time", "Glucose (mg/dL)"),
+            width="stretch",
+        )
+    with tabs[1]:
+        st.plotly_chart(
+            ketomojo_measure_chart(sessions, "ketone", "Ketones Over Time", "Ketones (mmol/L)"),
+            width="stretch",
+        )
+    with tabs[2]:
+        st.plotly_chart(
+            ketomojo_measure_chart(sessions, "glucose_ketone_index", "GKI Over Time", "GKI"),
+            width="stretch",
+        )
+    with tabs[3]:
+        st.plotly_chart(ketomojo_rolling_chart(sessions), width="stretch")
+
+
+def analytics_patterns_section(sessions) -> None:
+    section_heading("Keto-Mojo Patterns")
+    if sessions.empty:
+        st.info("Pattern charts will appear after you import Keto-Mojo readings.")
+        return
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.plotly_chart(ketomojo_gki_category_chart(sessions), width="stretch")
+    with col2:
+        st.plotly_chart(ketomojo_time_of_day_chart(sessions), width="stretch")
+
+
+def analytics_health_log_section(entries) -> None:
+    section_heading("Health Log Relationships")
+    if entries.empty:
+        st.info("Health log relationship charts will appear after you save daily entries.")
+        return
+
+    entries = _entries_with_imported_glucose_ketones(entries)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.plotly_chart(headache_over_time_chart(entries), width="stretch")
+        st.plotly_chart(
+            relationship_chart(entries, "glucose_mg_dl", "headache_severity_0_to_10", "Glucose vs Headache"),
+            width="stretch",
+        )
+        st.plotly_chart(energy_over_time_chart(entries), width="stretch")
+    with col2:
+        st.plotly_chart(sleep_hours_over_time_chart(entries), width="stretch")
+        st.plotly_chart(
+            relationship_chart(entries, "ketones_mmol_l", "energy_1_to_10", "Ketones vs Energy"),
+            width="stretch",
+        )
+        st.plotly_chart(mood_stability_over_time_chart(entries), width="stretch")
+
+
+def analytics_tab_content() -> None:
+    entries = load_entries()
+    readings = load_ketomojo_readings()
+    sessions = build_ketomojo_sessions(readings)
+
+    analytics_summary_section(entries, sessions)
+    st.divider()
+    analytics_trends_section(sessions)
+    st.divider()
+    analytics_patterns_section(sessions)
+    st.divider()
+    analytics_health_log_section(entries)
+
+
+def _format_metric(value: object, suffix: str = "") -> str:
+    if _is_missing(value):
+        return "n/a"
+
+    formatted = f"{float(value):.1f}"
+    return f"{formatted} {suffix}".strip()
+
+
+def _ketomojo_window_averages(sessions) -> object:
+    chart_data = sessions.copy()
+    chart_data["session_time"] = pd.to_datetime(chart_data["session_time"])
+    latest_time = chart_data["session_time"].max()
+    rows = []
+
+    for days in [7, 14, 30]:
+        window = chart_data[chart_data["session_time"] >= latest_time - pd.Timedelta(days=days)]
+        rows.append(
+            {
+                "window": f"Last {days} days",
+                "sessions": len(window),
+                "avg_glucose": window["glucose"].mean(),
+                "avg_ketones": window["ketone"].mean(),
+                "avg_gki": window["glucose_ketone_index"].mean(),
+            }
+        )
+
+    averages = pd.DataFrame(rows)
+    return averages.round({"avg_glucose": 1, "avg_ketones": 2, "avg_gki": 2})
+
+
+daily_health_tab, diet_tab, ketomojo_tab, analytics_tab = st.tabs(
+    ["Daily Health", "Diet", "Keto-Mojo", "Analytics"]
+)
 
 with daily_health_tab:
     entry_form()
     st.divider()
     recent_entries_section()
     st.divider()
-    charts_section()
-    st.divider()
     observations_section()
 
 with diet_tab:
     diet_form()
 
-st.markdown(f'<p class="hm-data-file">Data file: {DEFAULT_CSV_PATH}</p>', unsafe_allow_html=True)
+with ketomojo_tab:
+    ketomojo_import_section()
+    st.divider()
+    ketomojo_summary_section()
+    st.divider()
+    ketomojo_history_section()
+
+with analytics_tab:
+    analytics_tab_content()
+
+st.markdown(
+    f'<p class="hm-data-file">Data files: {DEFAULT_CSV_PATH}; {KETOMOJO_READINGS_PATH}</p>',
+    unsafe_allow_html=True,
+)

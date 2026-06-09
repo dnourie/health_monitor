@@ -7,6 +7,9 @@ venv/
 logs/
 
 # Personal health data stays local by default.
-data/*.csv
+data/*
 data/backups/
 !data/.gitkeep
+
+# Local notebook runtime files.
+notebooks/.ipynb_checkpoints/
